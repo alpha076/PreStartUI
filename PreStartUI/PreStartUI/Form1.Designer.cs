@@ -126,9 +126,7 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.label5.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Underline, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label5.ForeColor = System.Drawing.Color.Blue;
+            this.label5.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label5.Location = new System.Drawing.Point(358, 145);
             this.label5.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label5.Name = "label5";
@@ -149,9 +147,7 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.label4.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Underline, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label4.ForeColor = System.Drawing.Color.Blue;
+            this.label4.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label4.Location = new System.Drawing.Point(358, 16);
             this.label4.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label4.Name = "label4";
@@ -241,6 +237,7 @@
             // Continue
             // 
             this.Continue.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.Continue.Enabled = false;
             this.Continue.Font = new System.Drawing.Font("Consolas", 9.75F);
             this.Continue.Location = new System.Drawing.Point(718, 112);
             this.Continue.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
@@ -254,7 +251,6 @@
             // TSMediaErrorLabel
             // 
             this.TSMediaErrorLabel.AutoSize = true;
-            this.TSMediaErrorLabel.Cursor = System.Windows.Forms.Cursors.Hand;
             this.TSMediaErrorLabel.ForeColor = System.Drawing.Color.Red;
             this.TSMediaErrorLabel.Location = new System.Drawing.Point(1, 123);
             this.TSMediaErrorLabel.Name = "TSMediaErrorLabel";

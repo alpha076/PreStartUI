@@ -54,7 +54,7 @@ namespace PreStartUI
                 NetTestHost = ReadValueFromXML("NetTestHost");
                 SMToolsURI = ReadValueFromXML("SMTools/URI");
                 TargetingMode = ReadValueFromXML("SMTools/Targeting/Mode");
-                CMDatPath = Environment.GetEnvironmentVariable("CONFIGPATH");
+                CMDatPath = ReadValueFromXML("/ConfigMgr/DatPath");
                 CMSite = ReadValueFromXML("/ConfigMgr/Site");
             }
 
@@ -859,8 +859,6 @@ namespace PreStartUI
             string PostCommand = ReadValueFromXML("PostCommand");
             string PostCommandArgs = ReadValueFromXML("PostCommandArgs");
             string PostCommandWD = ReadValueFromXML("PostCommandWD");
-
-            PostCommandArgs = PostCommandArgs.Replace("%CONFIGPATH%", CMDatPath);
 
             if (!String.IsNullOrEmpty(PostCommand))
             {

@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<settings> 
+  <LogCaptureScript>Capture-OSDLogs.ps1</LogCaptureScript>
+  <RemoteLogPath>\\165.37.230.111\BuildLogs$</RemoteLogPath>
+  <LocalLogPath>\Windows\Temp\SMSTSLog</LocalLogPath>
+  <SMTools>
+    <URI selected="true">http://smtesb.bankofamerica.com:4949/bareMetalTargetData/api</URI>
+    <URI>http://devsmtesb.bankofamerica.com:8280/bareMetalTargetData/api</URI>
+  <Targeting>
+    <Mode selected="true">MACAddress</Mode>
+    <Mode>SMBios GUID</Mode>
+  </Targeting>	
+  </SMTools>
+  <ConfigMgr>
+    <Site selected="true">C01</Site>
+    <Site>DC1</Site>
+    <DatPath>\sms\data</DatPath>
+  </ConfigMgr>
+  <NetTestHost>flagscape.bankofamerica.com</NetTestHost>
+  <RemoteCommand>\BAC\TightVNC\copyit.bat</RemoteCommand>
+  <PostCommand />
+  <PostCommandArgs />
+  <PostCommandWD />
+</settings>
