@@ -11,98 +11,12 @@ namespace PreStartUI
     {
 
         public static bool enableSiteCongfig = true;
-        
+
         public Options()
         {
             InitializeComponent();
         }
 
-
-/*
-        private void GetSMToolsURIsFromXML()
-        {
-            try
-            {
-                //settingsFilePath is a string variable storing the path of the settings file 
-                XPathDocument doc = new XPathDocument(mainForm.settingsFilePath);
-                XPathNavigator nav = doc.CreateNavigator();
-                // Compile a standard XPath expression
-                XPathExpression expr;
-                expr = nav.Compile(@"/settings/SMTools/URI");
-                XPathNodeIterator iterator = nav.Select(expr);
-                // Iterate on the node set
-                while (iterator.MoveNext())
-                {
-                    int newItemIndex = comboBox1.Items.Add(iterator.Current.Value);
-                    if (iterator.Current.HasAttributes)
-                    {
-                        string selected = iterator.Current.GetAttribute("selected", nav.NamespaceURI);
-                        if (selected == "true") { comboBox1.SelectedIndex = newItemIndex; }
-                    }
-                }
-            }
-            catch (System.Exception ex)
-            {
-                MessageBox.Show("Error: " + ex.Message);
-            }
-        }
-
-        private void GetCMSitesFromXML()
-        {
-            try
-            {
-                //settingsFilePath is a string variable storing the path of the settings file 
-                XPathDocument doc = new XPathDocument(mainForm.settingsFilePath);
-                XPathNavigator nav = doc.CreateNavigator();
-                // Compile a standard XPath expression
-                XPathExpression expr;
-                expr = nav.Compile(@"/settings/ConfigMgr/Site");
-                XPathNodeIterator iterator = nav.Select(expr);
-                // Iterate on the node set
-                while (iterator.MoveNext())
-                {
-                    int newItemIndex = comboBox2.Items.Add(iterator.Current.Value);
-                    if (iterator.Current.HasAttributes)
-                    {
-                        string selected = iterator.Current.GetAttribute("selected", nav.NamespaceURI);
-                        if (selected == "true"){ comboBox2.SelectedIndex = newItemIndex; }
-                    }
-                }
-            }
-            catch (System.Exception ex)
-            {
-                MessageBox.Show("Error: " + ex.Message);
-            }
-        }
-
-        private void GetTargetingFromXML()
-        {
-            try
-            {
-                //settingsFilePath is a string variable storing the path of the settings file 
-                XPathDocument doc = new XPathDocument(mainForm.settingsFilePath);
-                XPathNavigator nav = doc.CreateNavigator();
-                // Compile a standard XPath expression
-                XPathExpression expr;
-                expr = nav.Compile(@"/settings/SMTools/Targeting/Mode");
-                XPathNodeIterator iterator = nav.Select(expr);
-                // Iterate on the node set
-                while (iterator.MoveNext())
-                {
-                    int newItemIndex = comboBox3.Items.Add(iterator.Current.Value);
-                    if (iterator.Current.HasAttributes)
-                    {
-                        string selected = iterator.Current.GetAttribute("selected", nav.NamespaceURI);
-                        if (selected == "true"){ comboBox3.SelectedIndex = newItemIndex; }
-                    }
-                }
-            }
-            catch (System.Exception ex)
-            {
-                MessageBox.Show("Error: " + ex.Message);
-            }
-        }
-*/
         public static string FindVariablesFile()
         {
             mainForm.LogIt("Reading Removable Disk Info");
@@ -114,9 +28,9 @@ namespace PreStartUI
                 foreach (ManagementObject diskDrive in searcher.Get())
                 {
                     string _drive = diskDrive["DeviceID"].ToString();
-                    mainForm.LogIt("Checking " + _drive + " for " + mainForm.CMDatPath);
+                    mainForm.LogIt("Checking " + _drive + " for " + mainForm.CMDatFile);
 
-                    if (File.Exists(_drive + mainForm.CMDatPath + "\\variables.dat"))
+                    if (File.Exists(_drive + mainForm.CMDatFile + "\\variables.dat"))
                     {
                         mainForm.LogIt("Found variables dat path at " + _drive);
                         if (diskDrive["DriveType"].ToString() == "5")
@@ -190,7 +104,7 @@ namespace PreStartUI
 
             for (int i = 0; i < SMToolsSites.Items.Count; i++)
             {
-                if(SMToolsSites.Items[i].ToString() == mainForm.SMToolsURI)
+                if (SMToolsSites.Items[i].ToString() == mainForm.SMToolsURI)
                 {
                     SMToolsSites.SelectedIndex = i;
                 }
@@ -211,13 +125,20 @@ namespace PreStartUI
             {
                 mainForm.CMSite = CMSites.Items[CMSites.SelectedIndex].ToString();
                 mainForm.LogIt("Changing CM Site Code to " + mainForm.CMSite);
-                string _datFile = System.Environment.CurrentDirectory + "\\Variables." + mainForm.CMSite;
+                string _newDatFile = System.Environment.CurrentDirectory + "\\Variables." + mainForm.CMSite;
 
                 try
                 {
-                    string _datPath = FindVariablesFile();
-                    mainForm.LogIt("Copying " + _datFile + " to " + _datPath + "\\variables.dat");
-                    File.Copy(_datFile, _datPath + "\\variables.dat", true);
+                    string _datFile = mainForm.CMDatPath + "\\" + mainForm.CMDatFile;
+                    if (File.Exists(_newDatFile) )
+                    {
+                        if(File.Exists(_datFile))
+                        {
+                            mainForm.LogIt("Copying " + _newDatFile + " to " + _datFile);
+                            File.Copy(_newDatFile, _datFile, true);
+                        }else{ mainForm.LogIt(_datFile + " not found!"); }
+                    }
+                    else{ mainForm.LogIt(_newDatFile + " not found!"); }
                 }
                 catch (System.Exception ex)
                 {
@@ -229,7 +150,7 @@ namespace PreStartUI
 
         private void comboBox3_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if(mainForm.TargetingMode != TargetingModes.Items[TargetingModes.SelectedIndex].ToString())
+            if (mainForm.TargetingMode != TargetingModes.Items[TargetingModes.SelectedIndex].ToString())
             {
                 mainForm.TargetingMode = TargetingModes.Items[TargetingModes.SelectedIndex].ToString();
                 mainForm.LogIt("TargetingMode set to " + mainForm.TargetingMode);
@@ -244,7 +165,18 @@ namespace PreStartUI
                 mainForm.LogIt("SMTools set to " + mainForm.SMToolsURI);
             }
         }
-    }
 
+        private void CleanDisk_Click(object sender, EventArgs e)
+        {
+            string command = @"x:\windows\system32\diskpart.exe";
+            string commandArgs = "/s clean_disk.txt";
+            string commandWD = @"x:\windows\system32";
+
+            if (!String.IsNullOrEmpty(command))
+            {
+                mainForm.RunCommand(command, commandArgs, commandWD);
+            }
+        }
+    }
 
 }

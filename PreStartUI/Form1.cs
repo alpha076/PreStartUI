@@ -24,10 +24,10 @@ namespace PreStartUI
         public static string SMToolsURI;
         public static string TargetingMode;
         public static string CMDatPath;
+        public static string CMDatFile;
         public static bool DoUpdate = false;
         public static bool SiteCodeChanged = false;
         public static bool URIChanged = false;
-        public static string CMDatFile;
         public static string CMSite;
         public static string PrimaryMACAddress;
         public static string LogFile;
@@ -55,6 +55,7 @@ namespace PreStartUI
                 SMToolsURI = ReadValueFromXML("SMTools/URI");
                 TargetingMode = ReadValueFromXML("SMTools/Targeting/Mode");
                 CMDatPath = Environment.GetEnvironmentVariable("CONFIGPATH");
+                CMDatFile = ReadValueFromXML("/ConfigMgr/DatPath");
                 CMSite = ReadValueFromXML("/ConfigMgr/Site");
             }
 
@@ -80,6 +81,21 @@ namespace PreStartUI
             if (File.Exists(settingsFilePath))
             { LogIt("Settings: " + settingsFilePath); }
             else { LogIt("WARN: " + settingsFilePath + " not found!"); }
+
+            if (File.Exists(CMDatPath + "\\" + CMDatFile + "\\variables.dat"))
+            {
+                LogIt("Found variables dat path at " + CMDatPath);
+                TSMediaErrorLabel.Text = "Found variables dat path on " + CMDatPath;
+                TSMediaErrorLabel.Visible = true;
+                TSMediaErrorLabel.ForeColor = System.Drawing.Color.Green;
+            }
+            else
+            {
+                LogIt("Could not locate task sequence media");
+                TSMediaErrorLabel.Visible = true;
+                TSMediaErrorLabel.ForeColor = System.Drawing.Color.Red;
+                TSMediaErrorLabel.Text = "Could not locate task sequence media (click to refresh)";
+            }
         }
 
         public static void LogIt(string LogEntry)
@@ -329,7 +345,6 @@ namespace PreStartUI
                     string Pf = "NIC-" + DeviceID + ": ";
                     treeView1.Nodes.Add(tn);
 
-
                     LogIt(Pf + mo["Name"].ToString());
 
                     try
@@ -450,14 +465,13 @@ namespace PreStartUI
         public void GetDiskInfo()
         {
             diskTree.Nodes.Clear();
-            bool TSMediaFound = false;
             LogIt("Reading Disk Info");
             try
             {
                 WqlObjectQuery qry = new WqlObjectQuery("SELECT * FROM Win32_DiskDrive");
                 ManagementObjectSearcher searcher = new ManagementObjectSearcher(qry);
 
-
+                string Pf;
                 //Get Disk Drives
                 foreach (ManagementObject diskDrive in searcher.Get())
                 {
@@ -466,8 +480,10 @@ namespace PreStartUI
                     string _size = diskDrive["Size"].ToString();
                     string _partitions = diskDrive["Partitions"].ToString();
                     string _model = diskDrive["Model"].ToString();
+                    string _index = diskDrive["Index"].ToString();
 
-                    string Pf = _deviceID + ": ";
+                    Pf = _deviceID + ": ";
+                    LogIt(Pf + "Index: " + _index);
                     LogIt(Pf + "Status: " + _status);
                     LogIt(Pf + "Size: " + _size);
                     LogIt(Pf + "Model: " + _model);
@@ -475,13 +491,11 @@ namespace PreStartUI
 
                     TreeNode topNode = new TreeNode();
                     if (!(_status == "OK")) { topNode.ForeColor = System.Drawing.Color.Red; }
-                    topNode.Text = _deviceID;
+                    topNode.Text = "Disk " + _index;
 
                     topNode.Nodes.Add("Status: " + _status);
                     topNode.Nodes.Add("Size: " + _size);
                     topNode.Nodes.Add("Model: " + _model);
-
-
 
                     //Use the device ID to get partitions
                     qry = new WqlObjectQuery("ASSOCIATORS OF {Win32_DiskDrive.DeviceID='" + _deviceID + "'} WHERE AssocClass = Win32_DiskDriveToDiskPartition");
@@ -499,7 +513,7 @@ namespace PreStartUI
                             string _partSize = logicalDisk["Size"].ToString();
                             string _volName = logicalDisk["VolumeName"].ToString();
 
-                            Pf = Pf + _driveLetter;
+                            Pf = _deviceID + ": " + _driveLetter;
                             LogIt(Pf + "Name: " + _volName);
                             LogIt(Pf + "FileSystem: " + _fileSystem);
                             LogIt(Pf + "Size: " + _partSize);
@@ -510,67 +524,24 @@ namespace PreStartUI
                             partNode.Nodes.Add("FileSystem: " + _fileSystem);
                             partNode.Nodes.Add("Size: " + _partSize);
 
-                            mainForm.LogIt("Checking " + _driveLetter + " for " + mainForm.CMDatPath);
-
-                            if (File.Exists(_driveLetter + mainForm.CMDatPath + "\\variables.dat"))
-                            {
-                                LogIt("Found variables dat path at " + _driveLetter);
-                                TSMediaFound = true;
-                                TSMediaErrorLabel.Visible = true;
-                                TSMediaErrorLabel.ForeColor = System.Drawing.Color.Green;
-                                TSMediaErrorLabel.Text = "task sequence media found on " + _driveLetter.Split('\\')[0];
+                            if (CMDatPath == _driveLetter + "\\") {
                                 partNode.ForeColor = System.Drawing.Color.Green;
-                            } else
-                            {
-                                TSMediaErrorLabel.Visible = true;
-                                TSMediaErrorLabel.ForeColor = System.Drawing.Color.Red;
-                                TSMediaErrorLabel.Text = "Could not locate task sequence media. (click to refresh)";
+                                partNode.Text = partNode.Text + " (CM Data Path)";
+                                partNode.ToolTipText = "This disk contains the data files necassary to start a task sequence";
                             }
-
                             topNode.Nodes.Add(partNode);
                         }
+          
                     }
 
-                    diskTree.Nodes.Add(topNode);
+                    
+                    diskTree.Nodes.Insert(Convert.ToInt32(_index), topNode);
                 }
-
             }
             catch (System.Exception ex)
             {
                 LogIt("Error: " + ex.Message);
             }
-
-            if (!TSMediaFound)
-            {
-                try
-                {
-                    LogIt("Checking Optical Media for variables.dat");
-                    WqlObjectQuery qry = new WqlObjectQuery("SELECT * FROM Win32_LogicalDisk WHERE DriveType = 5");
-                    ManagementObjectSearcher searcher = new ManagementObjectSearcher(qry);
-
-                    foreach (ManagementObject diskDrive in searcher.Get())
-                    {
-                        string _driveletter = diskDrive["DeviceID"].ToString();
-                        mainForm.LogIt("Checking " + _driveletter + " for " + mainForm.CMDatPath);
-
-                        if (File.Exists(_driveletter + mainForm.CMDatPath + "\\variables.dat"))
-                        {
-                            TSMediaFound = true;
-                            TSMediaErrorLabel.Visible = true;
-                            LogIt("Found variables dat path at " + _driveletter);
-                            LogIt("WARN: variables.dat is on optical media!");
-                            TSMediaErrorLabel.ForeColor = System.Drawing.Color.Green;
-                            TSMediaErrorLabel.Text = "task sequence media found on " + _driveletter.Split('\\')[0];
-
-                        }
-                    }
-                }
-                catch (System.Exception ex)
-                {
-                    LogIt("Error: " + ex.Message);
-                }
-            }
-
         }
 
         public void SelfUpdate()
@@ -594,7 +565,6 @@ namespace PreStartUI
             GetCSInfo();
             GetNWInfo();
             GetDiskInfo();
-
 
             OptsDlg.textBox1.Text = LoggingShare;
             populateDropDownFromXML(OptsDlg.CMSites, @"/settings/ConfigMgr/Site");
@@ -855,7 +825,6 @@ namespace PreStartUI
 
         private void Continue_Click(object sender, EventArgs e)
         {
-            OptsDlg.Dispose();
             string PostCommand = ReadValueFromXML("PostCommand");
             string PostCommandArgs = ReadValueFromXML("PostCommandArgs");
             string PostCommandWD = ReadValueFromXML("PostCommandWD");
@@ -867,8 +836,6 @@ namespace PreStartUI
                 this.WindowState = FormWindowState.Minimized;
                 RunCommand(PostCommand, PostCommandArgs, PostCommandWD);
             }
-            this.Close();
-            this.Dispose();
         }
 
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)

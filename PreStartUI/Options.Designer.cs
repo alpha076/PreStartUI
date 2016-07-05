@@ -118,7 +118,7 @@
             // 
             this.TargetingModes.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.TargetingModes.FormattingEnabled = true;
-            this.TargetingModes.Location = new System.Drawing.Point(329, 80);
+            this.TargetingModes.Location = new System.Drawing.Point(186, 80);
             this.TargetingModes.Name = "TargetingModes";
             this.TargetingModes.Size = new System.Drawing.Size(137, 22);
             this.TargetingModes.TabIndex = 3;
@@ -128,7 +128,7 @@
             // 
             this.label5.AutoSize = true;
             this.label5.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label5.Location = new System.Drawing.Point(326, 59);
+            this.label5.Location = new System.Drawing.Point(183, 59);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(105, 14);
             this.label5.TabIndex = 0;
