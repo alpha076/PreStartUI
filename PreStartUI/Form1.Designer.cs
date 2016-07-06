@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.OKButton = new System.Windows.Forms.Button();
             this.CnclButton = new System.Windows.Forms.Button();
             this.WMIHWInfo = new System.Windows.Forms.Label();
@@ -61,6 +62,8 @@
             this.openShellToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.startRemoteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.cleanDisk = new System.Windows.Forms.ToolStripMenuItem();
+            this.networkTest = new System.Windows.Forms.Timer(this.components);
             this.HWGroupBox.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.statusStrip1.SuspendLayout();
@@ -359,6 +362,7 @@
             this.primaryUser.Name = "primaryUser";
             this.primaryUser.Size = new System.Drawing.Size(241, 22);
             this.primaryUser.TabIndex = 14;
+            this.primaryUser.WordWrap = false;
             // 
             // UUIDLabel
             // 
@@ -387,9 +391,9 @@
             // 
             this.toolStripStatusLabel1.Font = new System.Drawing.Font("Consolas", 9.75F);
             this.toolStripStatusLabel1.Name = "toolStripStatusLabel1";
-            this.toolStripStatusLabel1.Size = new System.Drawing.Size(825, 17);
+            this.toolStripStatusLabel1.Size = new System.Drawing.Size(794, 17);
             this.toolStripStatusLabel1.Spring = true;
-            this.toolStripStatusLabel1.Text = "toolStripStatusLabel1";
+            this.toolStripStatusLabel1.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.toolStripStatusLabel1.Click += new System.EventHandler(this.toolStripStatusLabel1_Click);
             // 
             // menuStrip1
@@ -443,6 +447,16 @@
             this.aboutToolStripMenuItem.Size = new System.Drawing.Size(54, 20);
             this.aboutToolStripMenuItem.Text = "About";
             this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
+            // 
+            // cleanDisk
+            // 
+            this.cleanDisk.Name = "cleanDisk";
+            this.cleanDisk.Size = new System.Drawing.Size(32, 19);
+            // 
+            // networkTest
+            // 
+            this.networkTest.Interval = 60000;
+            this.networkTest.Tick += new System.EventHandler(this.networkTest_Tick);
             // 
             // mainForm
             // 
@@ -520,6 +534,9 @@
         private System.Windows.Forms.Button Continue;
         private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem startRemoteToolStripMenuItem;
+        private System.Windows.Forms.ContextMenuStrip diskOptions;
+        private System.Windows.Forms.ToolStripMenuItem cleanDisk;
+        private System.Windows.Forms.Timer networkTest;
     }
 }
 

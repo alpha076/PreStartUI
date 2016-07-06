@@ -19,8 +19,10 @@ namespace PreStartUI
     public partial class mainForm : Form
     {
         Options OptsDlg = new Options();
+        public static ManagementEventWatcher bootStrapWatch;
         public static string LoggingShare;
         public static string NetTestHost;
+        public static string NetTestInterval;
         public static string SMToolsURI;
         public static string TargetingMode;
         public static string CMDatPath;
@@ -52,6 +54,7 @@ namespace PreStartUI
                 LogPath = ReadValueFromXML("LocalLogPath");
                 LoggingShare = ReadValueFromXML("RemoteLogPath");
                 NetTestHost = ReadValueFromXML("NetTestHost");
+                NetTestInterval = ReadValueFromXML("NetTestInterval");
                 SMToolsURI = ReadValueFromXML("SMTools/URI");
                 TargetingMode = ReadValueFromXML("SMTools/Targeting/Mode");
                 CMDatPath = Environment.GetEnvironmentVariable("CONFIGPATH");
@@ -107,7 +110,7 @@ namespace PreStartUI
             sw.Close();
         }
 
-        public static int RunCommand(string command, string commandArgs, string workingDir, bool wait = false, bool threaded = false)
+        public static int RunCommand(string command, string commandArgs, string workingDir, bool wait = false)
         {
             try
             {
@@ -124,23 +127,14 @@ namespace PreStartUI
 
                 LogIt("Starting " + processInfo.FileName + " " + processInfo.Arguments + " from " + processInfo.WorkingDirectory);
 
-                if (threaded)
+                var process = Process.Start(processInfo);
+                if (wait)
                 {
-                    ThreadStart ths = new ThreadStart(() => Process.Start(processInfo));
-                    Thread th = new Thread(ths);
-                    th.Start();
-                }
-                else
-                {
-                    var process = Process.Start(processInfo);
-                    if (wait)
-                    {
-                        process.WaitForExit();
-                        LogIt("call completed with: " + process.ExitCode);
-                        LogIt("--" + process.StandardOutput.ReadToEnd());
-                        LogIt("Error: " + process.StandardError.ReadToEnd());
-                        return process.ExitCode;
-                    }
+                    process.WaitForExit();
+                    LogIt("--" + process.StandardOutput.ReadToEnd());
+                    LogIt("--" + process.StandardError.ReadToEnd());
+                    LogIt("call completed with: " + process.ExitCode);
+                    return process.ExitCode;
                 }
             }
             catch (System.Exception ex)
@@ -288,11 +282,11 @@ namespace PreStartUI
 
         public void TestNetworkConnection(string host, Int32 port, Int32 timeout = 10000)
         {
-            string hostStatus = "OFFLINE";
-            string connectionStatus = "Port Not-Connected";
+            string hostStatus = "Testing";
+            string connectionStatus = "No Connection";
 
             LogIt("Starting connection test to " + host + " on port " + port);
-            toolStripStatusLabel1.Text = "";
+            toolStripStatusLabel1.Text = "Starting connection test to " + host + " on port " + port;
 
             if (PingNetwork(host))
             {
@@ -303,15 +297,15 @@ namespace PreStartUI
                     TcpClient sock = new TcpClient();
                     var cnxn = sock.BeginConnect(host, port, null, null);
                     cnxn.AsyncWaitHandle.WaitOne(timeout, false);
-                    if (sock.Connected) { connectionStatus = "Port Connected"; }
-                    else { connectionStatus = "Port Not-Connected"; }
+                    if (sock.Connected) { connectionStatus = "Connection Established"; }
+                    else { connectionStatus = "No Connection"; }
                     sock.Close();
                 }
                 catch
                 {
                     connectionStatus = "Port Error: ";
                 }
-            }
+            }else { hostStatus = "OFFLINE"; }
             LogIt("Connection Test: " + hostStatus);
             LogIt("Communications Test: " + connectionStatus);
 
@@ -493,10 +487,16 @@ namespace PreStartUI
                     if (!(_status == "OK")) { topNode.ForeColor = System.Drawing.Color.Red; }
                     topNode.Text = "Disk " + _index;
 
+                    ContextMenu cm = new ContextMenu();
+                    MenuItem CleanDisk = new MenuItem("Clean Disk");
+                    CleanDisk.Click += new EventHandler(CleanDisk_Click);
+                    cm.MenuItems.Add(CleanDisk);
+                    topNode.ContextMenu = cm;
+
                     topNode.Nodes.Add("Status: " + _status);
                     topNode.Nodes.Add("Size: " + _size);
                     topNode.Nodes.Add("Model: " + _model);
-
+                   
                     //Use the device ID to get partitions
                     qry = new WqlObjectQuery("ASSOCIATORS OF {Win32_DiskDrive.DeviceID='" + _deviceID + "'} WHERE AssocClass = Win32_DiskDriveToDiskPartition");
                     searcher = new ManagementObjectSearcher(qry);
@@ -556,27 +556,6 @@ namespace PreStartUI
                 mainForm.RunCommand(@"\WINDOWS\system32\WindowsPowerShell\v1.0\powershell.exe", args, System.Environment.CurrentDirectory, true);
                 LogIt("Update complete");
             }
-        }
-
-        private void mainForm_Load(object sender, EventArgs e)
-        {
-            TestNetworkConnection(NetTestHost, 80);
-            HWGroupBox.Text = System.Environment.MachineName;
-            GetCSInfo();
-            GetNWInfo();
-            GetDiskInfo();
-
-            OptsDlg.textBox1.Text = LoggingShare;
-            populateDropDownFromXML(OptsDlg.CMSites, @"/settings/ConfigMgr/Site");
-            populateDropDownFromXML(OptsDlg.SMToolsSites, @"/settings/SMTools/URI");
-            populateDropDownFromXML(OptsDlg.TargetingModes, @"/settings/SMTools/Targeting/Mode");
-        }
-
-        private void CancelButton_Click(object sender, EventArgs e)
-        {
-            LogIt("Process Canceled");
-            OptsDlg.Dispose();
-            this.Close();
         }
 
         private int WebServiceCall(string queryString)
@@ -757,13 +736,118 @@ namespace PreStartUI
 
         }
 
+        private void CleanDisk(string diskName)
+        {
+            DialogResult rslt = MessageBox.Show("Are you sure you want to re-partition " + diskName + "?","Data Loss Warning", MessageBoxButtons.YesNo, MessageBoxIcon.Stop);
+            if(rslt == DialogResult.Yes)
+            {
+                //build diskpart file
+                string scriptName = @"\bac\clean_" + diskName.Replace(" ", "") + ".txt";
+                string[] lines = { "Select " + diskName, "clean", "create part pri", "format fs=NTFS QUICK", "active", "assign", "exit"  };
+                System.IO.File.WriteAllLines(scriptName, lines);
+                int clnrslt = RunCommand("diskpart.exe", "/s " + scriptName, Environment.SystemDirectory, true);
+                MessageBox.Show("Diskpart command returned " + clnrslt);
+
+                GetDiskInfo();
+            }
+        }
+
+        private void WatchClosingProcess(string processName)
+        {
+            /*
+                        ManagementEventWatcher startWatch = new ManagementEventWatcher(
+                          new WqlEventQuery("SELECT * FROM Win32_ProcessStartTrace where ProcessName='" + processName + "'"));
+
+                        startWatch.EventArrived += new EventArrivedEventHandler(startWatch_EventArrived);
+                        startWatch.Start();
+            */
+            try {
+                LogIt("Starting process event monitor");
+                LogIt(@"SELECT * FROM Win32_ProcessStopTrace where ProcessName LIKE ""%tsmbootstrap%""");
+                bootStrapWatch = new ManagementEventWatcher(
+                  new WqlEventQuery(@"SELECT * FROM Win32_ProcessStopTrace where ProcessName LIKE ""%tsmbootstrap%"""));
+                bootStrapWatch.EventArrived += new EventArrivedEventHandler(bootStrap_Stopped);
+                LogIt("Monitoring Processes");
+                bootStrapWatch.Start();
+            }catch (System.Exception ex)
+            {
+                LogIt(ex.Message);
+            }
+        }
+
+#region Event Handlers
+
+        private void mainForm_Load(object sender, EventArgs e)
+        {
+            TestNetworkConnection(NetTestHost, 80);
+            networkTest.Interval = Convert.ToInt32(NetTestInterval);
+            networkTest.Start();
+            HWGroupBox.Text = System.Environment.MachineName;
+            GetCSInfo();
+            GetNWInfo();
+            GetDiskInfo();
+
+            OptsDlg.textBox1.Text = LoggingShare;
+            populateDropDownFromXML(OptsDlg.CMSites, @"/settings/ConfigMgr/Site");
+            populateDropDownFromXML(OptsDlg.SMToolsSites, @"/settings/SMTools/URI");
+            populateDropDownFromXML(OptsDlg.TargetingModes, @"/settings/SMTools/Targeting/Mode");
+        }
+
+        private void mainForm_Closing(object sender, EventArgs e)
+        {
+            LogIt("Exiting with Close Control");
+            OptsDlg.Dispose();
+        }
+
         private void OKButton_Click(object sender, EventArgs e)
         {
             Submit_ToSMTools();
         }
 
+        private void Continue_Click(object sender, EventArgs e)
+        {
+
+            string PostCommand = ReadValueFromXML("PostCommand");
+            string PostCommandArgs = ReadValueFromXML("PostCommandArgs");
+            string PostCommandWD = ReadValueFromXML("PostCommandWD");
+            networkTest.Stop();
+
+            PostCommandArgs = PostCommandArgs.Replace("%CONFIGPATH%", CMDatPath);
+
+            if (!String.IsNullOrEmpty(PostCommand))
+            {
+                this.WindowState = FormWindowState.Minimized;
+                try
+                {
+                    var processInfo = new ProcessStartInfo(PostCommand)
+                    {
+                        CreateNoWindow = false,
+                        UseShellExecute = true,
+                        WorkingDirectory = PostCommandWD,
+                        Arguments = PostCommandArgs,
+                    };
+
+                    LogIt("Starting " + processInfo.FileName + " " + processInfo.Arguments + " from " + processInfo.WorkingDirectory);
+                    var process = Process.Start(processInfo);
+                }
+                catch (System.Exception ex)
+                {
+                    LogIt("ERROR: " + ex);
+                    MessageBox.Show("ERROR: " + ex);
+                }
+            }
+        }
+
+        private void CancelButton_Click(object sender, EventArgs e)
+        {
+            LogIt("Process Canceled");
+            OptsDlg.Dispose();
+            this.Close();
+        }
+
         private void toolStripStatusLabel1_Click(object sender, EventArgs e)
         {
+            TestNetworkConnection(NetTestHost, 80);
         }
 
         private void advancedToolStripMenuItem_Click(object sender, EventArgs e)
@@ -817,27 +901,6 @@ namespace PreStartUI
             TestNetworkConnection(NetTestHost, 80);
         }
 
-        private void mainForm_Closing(object sender, EventArgs e)
-        {
-            LogIt("Exiting with Close Control");
-            OptsDlg.Dispose(); 
-        }
-
-        private void Continue_Click(object sender, EventArgs e)
-        {
-            string PostCommand = ReadValueFromXML("PostCommand");
-            string PostCommandArgs = ReadValueFromXML("PostCommandArgs");
-            string PostCommandWD = ReadValueFromXML("PostCommandWD");
-
-            PostCommandArgs = PostCommandArgs.Replace("%CONFIGPATH%", CMDatPath);
-
-            if (!String.IsNullOrEmpty(PostCommand))
-            {
-                this.WindowState = FormWindowState.Minimized;
-                RunCommand(PostCommand, PostCommandArgs, PostCommandWD);
-            }
-        }
-
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
             AboutBox1 about = new AboutBox1();
@@ -886,5 +949,36 @@ namespace PreStartUI
                 } else { MessageBox.Show(this, "Remote service active: (" + ThisIPAddress + ")", "OSD Automation Support", MessageBoxButtons.OK); }
             } else { MessageBox.Show(command + " not found!"); }
         }
+
+        private void CleanDisk_Click(object sender, EventArgs e)
+        {
+            string diskIndex = diskTree.SelectedNode.Text;
+            CleanDisk(diskIndex);
+        }
+
+        private void networkTest_Tick(object sender, EventArgs e)
+        {
+            TestNetworkConnection(NetTestHost, 80);
+        }
+
+        private void bootStrap_Stopped(object sender, EventArrivedEventArgs e)
+        {
+            string processName = e.NewEvent.Properties["ProcessName"].Value.ToString();
+            LogIt(processName + " stopped");
+            bootStrapWatch.Stop();
+            LogIt("Process complete");
+            OptsDlg.Dispose();
+            this.Close();
+        }
+
+        /*
+        static void startWatch_EventArrived(object sender, EventArrivedEventArgs e)
+        {
+            startWatch.Stop();
+            Console.WriteLine("Process started: {0}", e.NewEvent.Properties["ProcessName"].Value);
+        }
+        */
+
+#endregion
     }
 }
